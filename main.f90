@@ -2,10 +2,10 @@ program DG1D
 implicit none
 
     real(kind=8)                                 :: xmax, h, f0, dt, CFL, mindist, Ja, Jai
-    real(kind=8), dimension(:), allocatable      :: xi, wi, v1D, rho1D, src, v1Dgll, rho1Dgll, mu1D,Z
+    real(kind=8), dimension(:), allocatable      :: xi, wi, v1D, rho1D, src, v1Dgll, rho1Dgll, mu,Z
     real(kind=8), dimension(:,:), allocatable    :: lprime, xgll, Minv, Ke
-    real(kind=8), dimension(:,:,:), allocatable  :: Al, Ar, u, unew
-    integer                                      :: N, ne, nt, isrc, isnap, ngll, i, j
+    real(kind=8), dimension(:,:,:), allocatable  :: Al, Ar, u, unew, k1, k2, flux
+    integer                                      :: N, ne, nt, esrc, gsrc, isnap, ngll, i, j, it, el
     integer, dimension(:,:), allocatable         :: Cij
     character(len=40)                            :: filename, outname, filecheck
 
@@ -44,7 +44,8 @@ implicit none
     read(2,*) f0
     read(2,*) dt
     read(2,*) nt
-    read(2,*) isrc
+    read(2,*) esrc
+    read(2,*) gsrc
     read(2,*) isnap
     close(2)
 
@@ -55,7 +56,7 @@ implicit none
     print*,"Wavelet's peak frequency -> ",f0
     print*,"Time step                -> ",dt
     print*,"Number of time steps     -> ",nt
-    print*,"Source location          -> ",isrc
+    print*,"Source location          -> ",esrc, gsrc
     print*,"Snapshot interval        -> ",isnap
 
     ngll = (N + 1) * ne
@@ -72,7 +73,7 @@ implicit none
     allocate(rho1D(ne))                 ! Density velocity model in elements
     allocate(rho1Dgll(ngll))            ! 1D density model mapped
     allocate(v1Dgll(ngll))              ! 1D velocity mapped
-    allocate(mu1D(ne))                  ! Shear modulus mapped
+    allocate(mu(ne))                  ! Shear modulus mapped
     allocate(Z(ne))                     ! Impepdences
     allocate(xgll(ne,N+1))              ! Array for global mapping
     allocate(lprime(N+1,N+1))           ! Dervatives of Lagrange polynomials
@@ -82,6 +83,8 @@ implicit none
     allocate(Ke(N+1,N+1))               ! Elemental stifness matrix
     allocate(Ar(ne,2,2),Al(ne,2,2))
     allocate(u(ne,N+1,2),unew(ne,N+1,2))! Solution fields
+    allocate(k1(ne,N+1,2),k2(ne,N+1,2))
+    allocate(flux(ne,N+1,2))
 
 
     !##########################################
@@ -96,6 +99,7 @@ implicit none
     call lagrangeprime(N,lprime)                   ! Lagrange polynomials derivatives
     call ricker(nt,f0,dt,src)                      ! Source time function
 
+    mu = (v1D**2) * rho1D
 
     write(*,*)"##########################################"
     write(*,*)"############### CFL Check ################"
@@ -147,7 +151,46 @@ implicit none
         Al(i,2,1) = -.5 * v1D(i) / Z(i);
         Al(i,2,2) = -.5 * v1D(i);
     end do
+    flux(1,1,:)     = MATMUL(RESHAPE(Ar(i,:,:),(/2,2/)),  RESHAPE((-u(i-1,N+1,:)),(/2/))) + &
+                      MATMUL(RESHAPE(Al(i,:,:),(/2,2/)),  RESHAPE((-u(i  ,1,:)),(/2/)))
 
-    print*,Al(1,:,:)
+    write(*,*) "##########################################"
+    write(*,*) "########### Begin time  loop  ############"
+    write(*,*) "##########################################"
+
+
+
+do it=1,nt
+
+    u(esrc,gsrc,1) = src(it)   ! source injection - displacement component
+
+    call compute_flux(ne,u,N,Al,Ar,flux)
+
+    do el=2,ne-1
+        k1(el,:,1)   = matmul(Minv,(-mu(el) * matmul(Ke, u(el,:,2))) - flux(el,:,1))
+        k1(el,:,2)   = matmul(Minv,(-1. / rho1D(el)) * matmul(Ke,u(el,:,1)) - flux(el,:,2))
+    end do
+
+    do el=2,ne-2
+        unew(el,:,1) = dt * matmul(Minv,(-mu(el) * matmul(Ke,u(el,:,2))) - &
+                       flux(el,:,1)) + u(el,:,1)
+        unew(el,:,2) = dt * matmul(Minv,(-1. / rho1D(el)) * matmul(Ke,u(el,:,1)) - &
+                flux(el,:,2)) + u(el,:,2)
+    end do
+
+    call compute_flux(ne,unew,N,Al,Ar,flux)
+
+    do el=2,ne-2
+        k2(el,:,1)   = matmul(Minv,(-mu(el) * matmul(Ke, unew(el,:,2))) - flux(el,:,1))
+        k2(el,:,2)   = matmul(Minv,(-1. / rho1D(el)) * matmul(Ke,unew(el,:,1)) - flux(el,:,2))
+    end do
+
+    unew = u + .5 * dt * (k1 + k2)
+
+    u    = unew;
+
+end do
+
+
 
 end program
