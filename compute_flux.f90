@@ -33,5 +33,7 @@ subroutine compute_flux(ne,u,N,Al,Ar,flux)
     flux(ne,N+1,:)     =  MATMUL(RESHAPE(Ar(ne,:,:), (/2,2/)) ,RESHAPE(u(ne, N+1,:),(/2/)))  + &
                           MATMUL(RESHAPE(Al(ne,:,:), (/2,2/)), zeros)
 
+
+
 end subroutine compute_flux
 
