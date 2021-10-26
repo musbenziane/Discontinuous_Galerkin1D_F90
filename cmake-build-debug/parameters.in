@@ -1,0 +1,12 @@
+10000                ! xmax
+2                    ! Polynomial order
+1000                 ! Number of elements
+50                   ! Element size
+4.                   ! Wavelet's peak frequency
+0.002                ! Time step
+2000                 ! Number of time steps
+100                  ! Source location - element number
+1                    ! Source location - collocation point
+1                    ! Snapshot interval
+
+
