@@ -219,6 +219,10 @@ write(*,*) "##########################################"
     write(4,rec=1) v
     close(4)
 
+    open(5,file="source.bin",access="direct",recl=nt*8)
+    write(5,rec=1) src
+    close(5)
+
     deallocate(xi)
     deallocate(wi)
     deallocate(v1D)
