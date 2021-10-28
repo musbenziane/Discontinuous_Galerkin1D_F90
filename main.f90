@@ -102,9 +102,9 @@ implicit none
     write(*,*)"##########################################"
     write(*,*)"############### CFL Check ################"
 
-    mindist = xgll(2,1) - xgll(1,1)
+    mindist = xgll(1,2) - xgll(1,1)
     CFL = (dt / mindist) * maxval(v1D(:))
-    if (CFL > .8) then
+    if (CFL > .18) then
         print"( a14,f6.3)"," Courant number is ",CFL
         print*,"Decrease time step, the program has been terminated"
         stop
