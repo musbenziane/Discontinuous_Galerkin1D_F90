@@ -4,7 +4,7 @@
 
 subroutine connectivity_matrix(N,ne,Cij)
     implicit none
-    integer, intent(in) :: N, ne
+    integer, intent(in)                     :: N, ne
     integer, dimension(N+1,ne), intent(out) :: Cij
     integer :: i, j, c
 
@@ -16,7 +16,5 @@ subroutine connectivity_matrix(N,ne,Cij)
         end do
         c = c -1
     end do
-
-
 
 end subroutine connectivity_matrix

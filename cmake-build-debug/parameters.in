@@ -1,11 +1,12 @@
+testing              ! model name prefix (model names: prefix_vp, prefix_rho)
 3200                 ! xmax
 6                    ! Polynomial order
 800                  ! Number of elements
 5                    ! Element size
 3.                   ! Wavelet's peak frequency
-0.000038             ! Time step
-30000                ! Number of time steps
-150                  ! Source location - element number
+0.000020             ! Time stepa
+100000               ! Number of time steps
+400                  ! Source location - element number
 1                    ! Source location - collocation point
-1                    ! Snapshot interval
+100                  ! Snapshot interval
 1                    ! 1 for rigid wall boundary condition
