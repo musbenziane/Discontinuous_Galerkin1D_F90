@@ -5,7 +5,7 @@ implicit none
     real(kind=8), dimension(:), allocatable      :: xi, wi, v1D, rho1D, src, v1Dgll, rho1Dgll, mu,Z
     real(kind=8), dimension(:,:), allocatable    :: lprime, xgll, Minv, Ke, sigma, v
     real(kind=8), dimension(:,:,:), allocatable  :: Al, Ar, u, unew, k1, k2, flux
-    integer                                      :: N, ne, nt, esrc, gsrc, isnap, ngll, i, j, it, el,c
+    integer                                      :: N, ne, nt, esrc, gsrc, isnap, ngll, i, j, it, el,c, nghc, bc
     integer, dimension(:,:), allocatable         :: Cij
     character(len=40)                            :: filename, filecheck, outname_sigma, outname_v
 
@@ -48,6 +48,8 @@ implicit none
     read(2,*) esrc
     read(2,*) gsrc
     read(2,*) isnap
+    read(2,*) bc
+    read(2,*) nghc
     close(2)
 
     print*,"Maximum distance         -> ",xmax
@@ -60,7 +62,11 @@ implicit none
     print*,"Source location          -> ",esrc, gsrc
     print*,"Snapshot interval        -> ",isnap
 
+
     ngll = (N + 1) * ne
+
+
+
     Ja   = h / 2.
     Jai  = 1 / ja
 
@@ -183,6 +189,15 @@ implicit none
         unew = u + .5 * dt * (k1 + k2)
         u    = unew;
 
+        if (bc .eq. 1) then
+            u(1,1:N+1,1)    = -u(4,1:N+1,1)
+            u(2,1:N+1,1)    = -u(3,1:N+1,1)
+            u(1,1:N+1,2)    =  u(4,1:N+1,2)
+            u(2,1:N+1,2)    =  u(3,1:N+1,2)
+        end if
+
+
+
 
         !##########################################
         !##### Stretch solution matrices      #####
@@ -219,7 +234,7 @@ write(*,*) "##########################################"
     write(4,rec=1) v
     close(4)
 
-    open(5,file="source.bin",access="direct",recl=nt*8)
+    open(5,file="OUTPUT/source.bin",access="direct",recl=nt*8)
     write(5,rec=1) src
     close(5)
 
