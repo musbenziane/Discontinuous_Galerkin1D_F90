@@ -15,6 +15,7 @@ subroutine connectivity_matrix(N,ne,Cij)
             c = c + 1
         end do
         c = c -1
+        print*,c
     end do
 
 end subroutine connectivity_matrix

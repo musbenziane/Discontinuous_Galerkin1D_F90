@@ -84,7 +84,6 @@ implicit none
 
     allocate(xi(N+1))                   ! GLL points
     allocate(wi(N+1))                   ! GLL Quadrature weights
-
     allocate(v1D(ne))                   ! 1D velocity model in elements
     allocate(rho1D(ne))                 ! Density velocity model in elements
     allocate(mu(ne))                    ! Shear modulus mapped
@@ -112,6 +111,8 @@ implicit none
     call lagrangeprime(N,lprime)                                  ! Lagrange polynomials derivatives
     call ricker(nt,f0,dt,src)                                     ! Source time function
     call connectivity_matrix(N,ne,Cij)
+
+
 
     mu = (v1D**2) * rho1D
 

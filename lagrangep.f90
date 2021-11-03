@@ -13,7 +13,7 @@ subroutine lagrangep(N,i,x,fac,l)
     integer :: j
     real (kind=8) ,  dimension(N+1) :: xi,wi
 
-    call gll(N,xi,wi)
+    call zwgljd(xi,wi,N+1,0.,0.)
     fac = 1
     do j=0,N
         if (i /= j) then
