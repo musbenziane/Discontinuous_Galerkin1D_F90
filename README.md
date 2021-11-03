@@ -5,6 +5,7 @@ To be pushed soon:
 <li> Free Surface BC
 <li> h-adaptivity 
 <li> OMP
+<li> Add Interface for connectivity matrix function.
 <li> ...
 <br/>
 GLL points and quadrature weights are calculated with gll_library.f90, which contains Gauss-Lobatto routines from M.I.T Departement of Mechanical Engineering
