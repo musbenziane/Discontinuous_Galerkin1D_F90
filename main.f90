@@ -55,6 +55,10 @@ implicit none
     read(2,*) bc
     close(2)
 
+
+
+
+
     print*,"Maximum distance         -> ",xmax
     print*,"Polynomial order         -> ",N
     print*,"Number of elements       -> ",ne
@@ -80,6 +84,7 @@ implicit none
 
     allocate(xi(N+1))                   ! GLL points
     allocate(wi(N+1))                   ! GLL Quadrature weights
+
     allocate(v1D(ne))                   ! 1D velocity model in elements
     allocate(rho1D(ne))                 ! Density velocity model in elements
     allocate(mu(ne))                    ! Shear modulus mapped
@@ -96,11 +101,12 @@ implicit none
     allocate(flux(ne,N+1,2))            ! Flux matrix
     allocate(sigma(ngll,NINT(nt/REAL(isnap))),v(ngll,NINT(nt/REAL(isnap)))) ! Stretched solution fields
 
+
     !##########################################
     !#####      Calling subroutines       #####
     !##########################################
 
-    call gll(N,xi,wi)                                             ! Getting GLL points and weights
+    call zwgljd(xi,wi,N+1,0.,0.)                                        ! Getting GLL points and weights
     call readmodelfiles1D(v1D, rho1D, ne, modnameprefix)          ! Reading model files
     call shapefunc(N,h,ne, xgll)                                  ! Global domain mapping
     call lagrangeprime(N,lprime)                                  ! Lagrange polynomials derivatives
@@ -114,7 +120,7 @@ implicit none
 
     mindist = xgll(1,2) - xgll(1,1)
     CFL = (dt / mindist) * maxval(v1D(:))
-    if (CFL > .18) then
+    if (CFL > .19) then
         print"( a14,f6.3)"," Courant number is ",CFL
         print*,"Decrease time step, the program has been terminated"
         stop
