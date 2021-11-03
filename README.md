@@ -6,3 +6,5 @@ To be pushed soon:
 <li> h-adaptivity 
 <li> OMP
 <li> ...
+<br/>
+GLL points are calculated with gll_library.f90, which contains Gauss-Lobatto routines from M.I.T Departement of Mechanical Engineering
