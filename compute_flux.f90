@@ -1,4 +1,6 @@
 subroutine compute_flux(ne,u,N,Al,Ar,flux)
+    !$ use omp_lib
+    implicit none
     integer, intent(in)          :: ne, N
     real(kind=8), intent(in)     :: u(ne,N+1,2), Al(ne,2,2), Ar(ne,2,2)
     real(kind=8), intent(out)    :: flux(ne,N+1,2)
@@ -13,12 +15,15 @@ subroutine compute_flux(ne,u,N,Al,Ar,flux)
     !##########################################
     !#### Inside the computational domain  ####
     !##########################################
+    
+    !$OMP PARALLEL DO PRIVATE(i) SHARED(flux,Ar,AL,u) SCHEDULE(static)
     do i=2,ne-2
         flux(i,1,:)     = MATMUL(RESHAPE(Ar(i,:,:),(/2,2/)),  RESHAPE((-u(i-1,N+1,:)),(/2/))) + &
                           MATMUL(RESHAPE(Al(i,:,:),(/2,2/)),  RESHAPE((-u(i  ,1,:)),(/2/)))
         flux(i,N+1,:)   = MATMUL(RESHAPE(Ar(i,:,:),(/2,2/)),  RESHAPE(  u(i,N+1,:),(/2/)))    + &
                           MATMUL(RESHAPE(Al(i,:,:),(/2,2/)),  RESHAPE(u(i+1,1,:),(/2/)))
     end do
+    !$OMP END PARALLEL DO
 
     !##########################################
     !#####  At the  domain's boundaries  ######

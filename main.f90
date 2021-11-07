@@ -1,17 +1,28 @@
 program DG1D
+!$ use omp_lib
 implicit none
 
-    real(kind=8)                                  :: xmax, h, f0, dt, CFL, mindist, Ja, Jai
-    real(kind=8), dimension(:),     allocatable   :: xi, wi, v1D, rho1D, src, v1Dgll, rho1Dgll, mu,Z
+    real(kind=8)                                  :: xmax, h, f0, dt, CFL, mindist, Ja, Jai, time, t_cpu_0, t_cpu_1, t_cpu
+    real(kind=8), dimension(:),     allocatable   :: xi, wi, v1D, rho1D, src, mu,Z
     real(kind=8), dimension(:,:),   allocatable   :: lprime, xgll, Minv, Ke, sigma, v
     real(kind=8), dimension(:,:,:), allocatable   :: Al, Ar, u, unew, k1, k2, flux
     integer                                       :: N, ne, nt, esrc, gsrc, isnap, ngll, i, j, k, it, el,c, &
-                                                     nghc, bc, reclsnaps
+                                                     bc, reclsnaps, n_workers, ir, t0, t1
     integer, dimension(:,:), allocatable          :: Cij
     character(len=40)                             :: filename, filecheck, outname_sigma, outname_v, &
                                                      modname_vp, modname_rho, modnameprefix
 
 
+    write(*,*) "##########################################"
+    write(*,*) "############### OpenMP     ###############"
+
+    !$OMP PARALLEL
+    !$ n_workers = OMP_GET_NUM_THREADS()
+    !$OMP END PARALLEL
+    !$ print '(3X,"Number of workers ->  ",i2)',n_workers
+
+    call cpu_time(t_cpu_0)
+    call system_clock(count=t0, count_rate=ir)
 
     filename          = "parameters.in"
     outname_sigma     = "OUTPUT/snapshots_sigma.bin"
@@ -54,9 +65,6 @@ implicit none
     read(2,*) isnap
     read(2,*) bc
     close(2)
-
-
-
 
 
     print*,"Maximum distance         -> ",xmax
@@ -105,7 +113,7 @@ implicit none
     !#####      Calling subroutines       #####
     !##########################################
 
-    call zwgljd(xi,wi,N+1,0.,0.)                                        ! Getting GLL points and weights
+    call zwgljd(xi,wi,N+1,0.,0.)                                  ! Getting GLL points and weights
     call readmodelfiles1D(v1D, rho1D, ne, modnameprefix)          ! Reading model files
     call shapefunc(N,h,ne, xgll)                                  ! Global domain mapping
     call lagrangeprime(N,lprime)                                  ! Lagrange polynomials derivatives
@@ -155,6 +163,7 @@ implicit none
 
     Z = rho1D * v1D
 
+    !$OMP PARALLEL DO PRIVATE(i) SHARED(Ar,Al,v1D,Z) SCHEDULE(static)
     do i=1,ne-2
         Ar(i,1,1) =  .5 * v1D(i)
         Ar(i,1,2) = -.5 * Z(i) * v1D(i)
@@ -166,6 +175,7 @@ implicit none
         Al(i,2,1) = -.5 * v1D(i) / Z(i)
         Al(i,2,2) = -.5 * v1D(i);
     end do
+    !$OMP END PARALLEL DO
 
     write(*,*) "##########################################"
     write(*,*) "########### Begin time  loop  ############"
@@ -177,20 +187,25 @@ implicit none
 
         call compute_flux(ne,u,N,Al,Ar,flux)
 
+        !$OMP PARALLEL DO PRIVATE(el) SHARED(k1,Minv,mu,rho1D,ke,u,flux) SCHEDULE(static)
         do el=2,ne-1
             k1(el,:,1)   = MATMUL(Minv,(-mu(el) * MATMUL(Ke, u(el,:,2))) - flux(el,:,1))
             k1(el,:,2)   = MATMUL(Minv,(-1. / rho1D(el)) * MATMUL(Ke,u(el,:,1)) - flux(el,:,2))
         end do
+        !$OMP END PARALLEL DO 
 
+        !$OMP PARALLEL DO PRIVATE(el) SHARED(unew,dt,Minv,mu,rho1D,ke,u,flux) SCHEDULE(static)
         do el=2,ne-2
             unew(el,:,1) = dt * MATMUL(Minv,(-mu(el) * MATMUL(Ke,u(el,:,2))) - &
                            flux(el,:,1)) + u(el,:,1)
             unew(el,:,2) = dt * MATMUL(Minv,(-1. / rho1D(el)) * MATMUL(Ke,u(el,:,1)) - &
                            flux(el,:,2)) + u(el,:,2)
         end do
+        !$OMP END PARALLEL DO
 
         call compute_flux(ne,unew,N,Al,Ar,flux)
 
+        !$OMP PARALLEL DO PRIVATE(el) SHARED(k2,dt,Minv,mu,rho1D,ke,u,flux) SCHEDULE(static)
         do el=2,ne-2
             k2(el,:,1)   = MATMUL(Minv,(-mu(el) * MATMUL(Ke, unew(el,:,2))) - flux(el,:,1))
             k2(el,:,2)   = MATMUL(Minv,(-1. / rho1D(el)) * MATMUL(Ke,unew(el,:,1)) - flux(el,:,2))
@@ -228,7 +243,7 @@ implicit none
             end do
         end if
 
-        if (mod(it,NINT(nt/100.)) == 0) then
+        if (mod(it,NINT(nt/10.)) == 0) then
             print*, "########### At time sample ->",it, "/",nt
         end if
 
@@ -251,9 +266,23 @@ implicit none
     write(4,rec=1) v
     close(4)
 
-    open(5,file="OUTPUT/source.bin",access="direct",recl=nt*8)
-    write(5,rec=1) src
-    close(5)
+    open(15,file="OUTPUT/source.bin",access="direct",recl=nt*8)
+    write(15,rec=1) src
+    close(15)
+
+    call system_clock(count=t1, count_rate=ir)
+    time = real(t1 - t0,kind=8) / real(ir,kind=8)
+
+    call cpu_time(t_cpu_1)
+    t_cpu = t_cpu_1 - t_cpu_0
+
+    write(*,*) "##########################################"
+    write(*,*) "######### TIME:                 ##########"
+    print '(//3X,"Elapsed Time        : ",1PE10.3," [s]",/ &
+            &,3X,"CPU Time            : ",1PE10.3," [s]",//)', &
+            & time,t_cpu
+    write(*,*) "##########################################"
+
 
     deallocate(xi)
     deallocate(wi)
