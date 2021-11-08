@@ -1,4 +1,41 @@
 program DG1D
+    !####################################################################################################################
+    ! DG1D: Noda Discontinuous Galerkin Method in 1D for the Elastic Wave Equation with Regular Mesh
+    ! NOTE: This program is yet to be tested against analytical solutions.
+    ! 
+    ! Language: Fortran 90, with parralel impelementation using OpenMP API
+    ! 
+    ! Sources:  Igel 2017, Leveque 2002, Hesthaven & Warburton 2008
+    !
+    ! This is part of the Numerical Modelling Workshop.
+    ! 
+    ! Supervisor: Pr. Emmanual Chaljub
+    ! Author    : Mus Benziane
+    !
+    ! Input file: [Example]
+    ! testing              ! model name prefix (model names: prefix_vp, prefix_rho)
+    ! 4000                 ! xmax
+    ! 6                    ! Polynomial order
+    ! 800                  ! Number of elements
+    ! 5                    ! Element size
+    ! 3.                   ! Wavelet's peak frequency
+    ! 0.000040             ! Time step
+    ! 50000                ! Number of time steps
+    ! 3                    ! Source location - element number
+    ! 1                    ! Source location - collocation point
+    ! 100                  ! Snapshot interval
+    ! 3                    ! [1/2/3] 1: Free surface, 2: Rigid wall, 3: Periodic
+    ! .6                   ! Att constant for sponge layer
+    ! 
+    ! -> Model files in C-Style binary floats [doubles]: Vs, Rho files are needed.
+    !                                                  : For simple models, use create1Dmodel_files.f90
+    ! 
+    ! -> Outputs are created in OUTPUT/ if OUTPUT/ is not created by the user, the program will not handle it.
+    !    Output files in OUTPUT directory:
+    !
+    !####################################################################################################################
+
+
 !$ use omp_lib
 implicit none
 
@@ -74,20 +111,22 @@ implicit none
     close(2)
 
 
-    print*,"Maximum distance         -> ",xmax
-    print*,"Polynomial order         -> ",N
-    print*,"Number of elements       -> ",ne
-    print*,"Element size             -> ",h
-    print*,"Wavelet's peak frequency -> ",f0
-    print*,"Time step                -> ",dt
-    print*,"Number of time steps     -> ",nt
-    print*,"Source location          -> ",esrc, gsrc
-    print*,"Snapshot interval        -> ",isnap
 
-    ngll = (N + 1) * ne
+    120 format (A,F6.1)
+    140 format (A,I4,X,I4)
+    160 format (A,I8)
 
-    Ja   = h / 2.
-    Jai  = 1 / ja
+    write(*,120)  "Maximum distance zmax, xmax        -> ",xmax
+    write(*,160)  "Polynomial order                   -> ",N
+    write(*,160)  "Number of elements                 -> ",ne
+    write(*,120)  "Element size                       -> ",h
+    write(*,160)  "Number of time steps               -> ",nt
+    write(*,120)  "Time step                          -> ",dt
+    write(*,120)  "Ricker's peak frequency            -> ",f0
+    write(*,140)  "Source location [nel/ngll]         -> ",esrc, gsrc
+    write(*,160)  "Snapshot interval                  -> ",isnap
+    write(*,160)  "Free Surface BC [1/2/3]==[FS/R/P]  -> ",bc
+
 
     modname_vp     = TRIM(modnameprefix)//'_vp'
     modname_rho    = TRIM(modnameprefix)//'_rho'
@@ -96,6 +135,8 @@ implicit none
     !##########################################
     !#####    Matrices allocation         #####
     !##########################################
+
+    ngll = (N + 1) * ne                 ! Number of GLL points
 
     allocate(xi(N+1))                   ! GLL points
     allocate(wi(N+1))                   ! GLL Quadrature weights
@@ -127,7 +168,12 @@ implicit none
     call ricker(nt,f0,dt,src)                                     ! Source time function
     call connectivity_matrix(N,ne,Cij)
 
-    mu = (v1D**2) * rho1D
+
+    Ja   = h / 2.                ! Jacobian: Regular 1D mesh is used
+    Jai  = 1 / ja                ! Jacobian's inverse
+
+    mu = (v1D**2) * rho1D        ! Shear modulus
+
 
     write(*,*)"##########################################"
     write(*,*)"############### CFL Check ################"
@@ -202,9 +248,9 @@ implicit none
         !$OMP PARALLEL DO PRIVATE(el) SHARED(unew,dt,Minv,mu,rho1D,ke,u,flux) SCHEDULE(static)
         do el=2,ne-2
             unew(el,:,1) = dt * MATMUL(Minv,(-mu(el) * MATMUL(Ke,u(el,:,2))) - &
-                           flux(el,:,1)) + u(el,:,1)
+                                       flux(el,:,1)) + u(el,:,1)
             unew(el,:,2) = dt * MATMUL(Minv,(-1. / rho1D(el)) * MATMUL(Ke,u(el,:,1)) - &
-                           flux(el,:,2)) + u(el,:,2)
+                                       flux(el,:,2)) + u(el,:,2)
         end do
         !$OMP END PARALLEL DO
 
@@ -289,7 +335,7 @@ implicit none
     write(*,*)  "Number of snapshots recorded          -> ",k
 
     write(*,*) "##########################################"
-    write(*,*) "######### Write solution binary ##########"
+    write(*,*) "######### Write solution binaries ########"
     write(*,*) "##########################################"
 
     inquire(iolength=reclsnaps) sigma
