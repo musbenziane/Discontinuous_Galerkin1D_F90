@@ -2,7 +2,8 @@ program DG1D
 !$ use omp_lib
 implicit none
 
-    real(kind=8)                                  :: xmax, h, f0, dt, CFL, mindist, Ja, Jai, time, t_cpu_0, t_cpu_1, t_cpu
+    real(kind=8)                                  :: xmax, h, f0, dt, CFL, mindist, Ja, Jai, time
+    real(kind=8)                                  :: t_cpu_0, t_cpu_1, t_cpu
     real(kind=8), dimension(:),     allocatable   :: xi, wi, v1D, rho1D, src, mu,Z
     real(kind=8), dimension(:,:),   allocatable   :: lprime, xgll, Minv, Ke, sigma, v
     real(kind=8), dimension(:,:,:), allocatable   :: Al, Ar, u, unew, k1, k2, flux
@@ -11,15 +12,21 @@ implicit none
     integer, dimension(:,:), allocatable          :: Cij
     character(len=40)                             :: filename, filecheck, outname_sigma, outname_v, &
                                                      modname_vp, modname_rho, modnameprefix
+    logical                                       :: OMPcheck = .false.
 
 
     write(*,*) "##########################################"
     write(*,*) "############### OpenMP     ###############"
+    !$ OMPcheck = .true.
+    if (OMPcheck) then
+        !$OMP PARALLEL
+        !$ n_workers = OMP_GET_NUM_THREADS()
+        !$OMP END PARALLEL
+        !$ print '(3X,"Number of workers ->  ",i2)',n_workers
+    else
+        write(*,*) "Program has been compiled without OpenMP; Time marching will run in serial"
+    end if
 
-    !$OMP PARALLEL
-    !$ n_workers = OMP_GET_NUM_THREADS()
-    !$OMP END PARALLEL
-    !$ print '(3X,"Number of workers ->  ",i2)',n_workers
 
     call cpu_time(t_cpu_0)
     call system_clock(count=t0, count_rate=ir)
@@ -119,7 +126,6 @@ implicit none
     call lagrangeprime(N,lprime)                                  ! Lagrange polynomials derivatives
     call ricker(nt,f0,dt,src)                                     ! Source time function
     call connectivity_matrix(N,ne,Cij)
-
 
     mu = (v1D**2) * rho1D
 
