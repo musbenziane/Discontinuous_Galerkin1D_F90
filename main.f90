@@ -7,7 +7,8 @@ program DG1D
     ! 
     ! Sources:  Igel 2017, Leveque 2002, Hesthaven & Warburton 2008
     ! 
-    ! The code used for arbitrary GLL points and weights was created by M.I.T departement of engineering. 
+    ! The code used for arbitrary GLL points and weights was created by M.I.T departement of engineering. Link is hereafter
+    ! https://geodynamics.org/cig/doxygen/release/specfem3d/    | file name: gll_library.f90
     ! 
     ! This is part of the Numerical Modelling Workshop.
     ! 
