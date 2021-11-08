@@ -210,7 +210,7 @@ implicit none
             k2(el,:,1)   = MATMUL(Minv,(-mu(el) * MATMUL(Ke, unew(el,:,2))) - flux(el,:,1))
             k2(el,:,2)   = MATMUL(Minv,(-1. / rho1D(el)) * MATMUL(Ke,unew(el,:,1)) - flux(el,:,2))
         end do
-        !$ END PARALLEL DO
+        !$OMP END PARALLEL DO
 
         unew = u + .5 * dt * (k1 + k2)
         u    = unew;
