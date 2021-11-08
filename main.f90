@@ -41,7 +41,6 @@ program DG1D
 
 !$ use omp_lib
 implicit none
-
     real(kind=8)                                  :: xmax, h, f0, dt, CFL, mindist, Ja, Jai, time
     real(kind=8)                                  :: t_cpu_0, t_cpu_1, t_cpu
     real(kind=8), dimension(:),     allocatable   :: xi, wi, v1D, rho1D, src, mu,Z
@@ -51,7 +50,7 @@ implicit none
                                                      bc, reclsnaps, n_workers, ir, t0, t1
     integer, dimension(:,:), allocatable          :: Cij
     character(len=40)                             :: filename, filecheck, outname_sigma, outname_v, &
-                                                     modname_vp, modname_rho, modnameprefix
+                                                     modnameprefix
     logical                                       :: OMPcheck = .false.
 
 
@@ -113,8 +112,6 @@ implicit none
     read(2,*) bc
     close(2)
 
-
-
     120 format (A,F6.1)
     140 format (A,I4,X,I4)
     160 format (A,I8)
@@ -129,10 +126,6 @@ implicit none
     write(*,140)  "Source location [nel/ngll]         -> ",esrc, gsrc
     write(*,160)  "Snapshot interval                  -> ",isnap
     write(*,160)  "Free Surface BC [1/2/3]==[FS/R/P]  -> ",bc
-
-
-    modname_vp     = TRIM(modnameprefix)//'_vp'
-    modname_rho    = TRIM(modnameprefix)//'_rho'
 
 
     !##########################################
@@ -193,6 +186,7 @@ implicit none
     end if
     write(*,*)"##########################################"
 
+
     !##########################################
     !####### Construct the mass matrix ########
     !##########################################
@@ -210,6 +204,7 @@ implicit none
                Ke(i,j) = wi(j) * lprime(i,j)
         end do
     end do
+
 
     !##########################################
     !##### Construct the Flux matrices    #####
@@ -230,6 +225,7 @@ implicit none
         Al(i,2,2) = -.5 * v1D(i);
     end do
     !$OMP END PARALLEL DO
+
 
     write(*,*) "##########################################"
     write(*,*) "########### Begin time  loop  ############"
@@ -333,8 +329,9 @@ implicit none
         end if
 
     end do
-    write(*,*) "##########################################"
 
+
+    write(*,*) "##########################################"
     write(*,*)  "Number of snapshots recorded          -> ",k
 
     write(*,*) "##########################################"
@@ -360,6 +357,7 @@ implicit none
 
     call cpu_time(t_cpu_1)
     t_cpu = t_cpu_1 - t_cpu_0
+    
 
     write(*,*) "##########################################"
     write(*,*) "######### TIME:                 ##########"
