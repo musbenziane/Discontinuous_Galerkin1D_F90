@@ -6,7 +6,9 @@ program DG1D
     ! Language: Fortran 90, with parralel impelementation using OpenMP API
     ! 
     ! Sources:  Igel 2017, Leveque 2002, Hesthaven & Warburton 2008
-    !
+    ! 
+    ! The code used for arbitrary GLL points and weights was created by M.I.T departement of engineering. 
+    ! 
     ! This is part of the Numerical Modelling Workshop.
     ! 
     ! Supervisor: Pr. Emmanual Chaljub
