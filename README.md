@@ -32,7 +32,7 @@ Check Cmake version before compiling if using CMake <br/>
     ! 1                    ! Source location - collocation point
     ! 100                  ! Snapshot interval
     ! 3                    ! [1/2/3] 1: Free surface, 2: Rigid wall, 3: Periodic
-    ! .6                   ! Att constant for sponge layer
+    ! 1                    ! Boundary condition only on the left side [not for periodic BC]
     ! 
     ! -> Model files in C-Style binary floats [doubles]: Vs, Rho files are needed.
     !                                                  : For simple models, use create1Dmodel_files.f90

@@ -1,4 +1,4 @@
-testing              ! model name prefix (model names: prefix_vp, prefix_rho)
+testing              ! model name prefix (model names: prefix_vs, prefix_rho)
 4000                 ! xmax
 6                    ! Polynomial order
 800                  ! Number of elements
@@ -9,5 +9,5 @@ testing              ! model name prefix (model names: prefix_vp, prefix_rho)
 3                    ! Source location - element number
 1                    ! Source location - collocation point
 100                  ! Snapshot interval
-3                    ! [1/2/3] 1: Free surface, 2: Rigid wall, 3: Periodic
-.6                   ! Att constant for sponge layer
+1                    ! [1/2/3] 1: Free surface, 2: Rigid wall, 3: Periodic
+1                    ! Boundary condition only on the left side [not for periodic BC]

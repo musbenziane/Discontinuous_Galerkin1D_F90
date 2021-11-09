@@ -6,7 +6,7 @@ subroutine readmodelfiles1D(v1D, rho1D, ne, modnameprefix)
     real (kind=8), dimension(ne), intent(out)     :: v1D, rho1D
     character (len=40)                            :: modname_vp, modname_rho, modnameprefix
 
-    modname_vp     = TRIM(modnameprefix)//'_vp'
+    modname_vp     = TRIM(modnameprefix)//'_vs'
     modname_rho    = TRIM(modnameprefix)//'_rho'
 
     open(10,file=modname_vp,access='direct',recl=ne*8)

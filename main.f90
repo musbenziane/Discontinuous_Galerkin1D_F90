@@ -28,7 +28,7 @@ program DG1D
     ! 1                    ! Source location - collocation point
     ! 100                  ! Snapshot interval
     ! 3                    ! [1/2/3] 1: Free surface, 2: Rigid wall, 3: Periodic
-    ! .6                   ! Att constant for sponge layer
+    ! 1                    ! Boundary condition only on the left side [not for periodic BC]
     ! 
     ! -> Model files in C-Style binary floats [doubles]: Vs, Rho files are needed.
     !                                                  : For simple models, use create1Dmodel_files.f90
@@ -47,10 +47,11 @@ implicit none
     real(kind=8), dimension(:,:),   allocatable   :: lprime, xgll, Minv, Ke, sigma, v
     real(kind=8), dimension(:,:,:), allocatable   :: Al, Ar, u, unew, k1, k2, flux
     integer                                       :: N, ne, nt, esrc, gsrc, isnap, ngll, i, j, k, it, el,c, &
-                                                     bc, reclsnaps, n_workers, ir, t0, t1
+                                                     bc, sbc, reclsnaps, ir, t0, t1
     integer, dimension(:,:), allocatable          :: Cij
     character(len=40)                             :: filename, filecheck, outname_sigma, outname_v, &
                                                      modnameprefix
+    !$ integer                                    :: n_workers
     logical                                       :: OMPcheck = .false.
 
 
@@ -110,6 +111,7 @@ implicit none
     read(2,*) gsrc
     read(2,*) isnap
     read(2,*) bc
+    read(2,*) sbc
     close(2)
 
     120 format (A,F6.1)
@@ -278,10 +280,12 @@ implicit none
             u(1,1:N+1,2)    =  u(4,1:N+1,2)
             u(2,1:N+1,2)    =  u(3,1:N+1,2)
 
-            u(ne-1,1:N+1,1) = -u(ne-2,1:N+1,1)
-            u(ne,1:N+1,1)   = -u(ne-3,1:N+1,1)
-            u(ne-1,1:N+1,2) =  u(ne-2,1:N+1,2)
-            u(ne,1:N+1,2)   =  u(ne-3,1:N+1,2)
+            if (sbc .ne. 1) then
+                u(ne-1,1:N+1,1) = -u(ne-2,1:N+1,1)
+                u(ne,1:N+1,1)   = -u(ne-3,1:N+1,1)
+                u(ne-1,1:N+1,2) =  u(ne-2,1:N+1,2)
+                u(ne,1:N+1,2)   =  u(ne-3,1:N+1,2)
+            end if
         end if
 
         if (bc .eq. 2) then ! Rigid BC
@@ -290,10 +294,12 @@ implicit none
             u(1,1:N+1,2)    =  -u(4,1:N+1,2)
             u(2,1:N+1,2)    =  -u(3,1:N+1,2)
 
-            u(ne-1,1:N+1,1) =   u(ne-2,1:N+1,1)
-            u(ne,1:N+1,1)   =   u(ne-3,1:N+1,1)
-            u(ne-1,1:N+1,2) =  -u(ne-2,1:N+1,2)
-            u(ne,1:N+1,2)   =  -u(ne-3,1:N+1,2)
+            if (sbc .ne. 1) then
+                u(ne-1,1:N+1,1) =   u(ne-2,1:N+1,1)
+                u(ne,1:N+1,1)   =   u(ne-3,1:N+1,1)
+                u(ne-1,1:N+1,2) =  -u(ne-2,1:N+1,2)
+                u(ne,1:N+1,2)   =  -u(ne-3,1:N+1,2)
+            end if
         end if
 
         if (bc .eq. 3) then ! Periodic
