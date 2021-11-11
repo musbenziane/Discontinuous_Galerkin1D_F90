@@ -3,11 +3,12 @@ program DG1D
     ! DG1D: Noda Discontinuous Galerkin Method in 1D for the Elastic Wave Equation with Regular Mesh
     ! NOTE: This program is yet to be tested against analytical solutions.
     ! 
-    ! Language: Fortran 90, with parralel impelementation using OpenMP API
+    ! Language: Fortran 90, with parallel impelementation using OpenMP API
     ! 
     ! Sources:  Igel 2017, Leveque 2002, Hesthaven & Warburton 2008
     ! 
-    ! The code used for arbitrary GLL points and weights was created by M.I.T departement of engineering. Link is hereafter
+    ! The code used for arbitrary polynomial order to get GLL points and weights was created by M.I.T departement of engineering. 
+    ! Link is hereafter
     ! https://geodynamics.org/cig/doxygen/release/specfem3d/    | file name: gll_library.f90
     ! 
     ! This is part of the Numerical Modelling Workshop.
@@ -235,7 +236,7 @@ implicit none
     k = 0
     do it=1,nt
 
-        u(esrc,gsrc,1) = src(it)   ! source injection - velocity component
+        u(esrc,gsrc,1) = src(it)   ! source injection - stress component
 
         call compute_flux(ne,u,N,Al,Ar,flux)
 
