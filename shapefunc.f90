@@ -9,7 +9,7 @@ subroutine shapefunc(N,h,ne,xg)
     real (kind=8) :: xi(N+1), wi(N+1)
 
     call zwgljd(xi,wi,N+1,0.,0.)
-
+    
     do i=1,ne
         do j=1,N+1
             xg(i,j) = h*(i-1) +  h * ((xi(j) + 1) / 2)

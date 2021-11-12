@@ -1,0 +1,43 @@
+clear; clc; close all;
+nt   = 60000;
+ne   = 800;
+ircv = 100;
+nrcv = 8; 
+N    = 5;
+h    = 5.;
+
+
+
+f   = fopen("OUTPUT/source.bin","r");
+src = fread(f,"float64");
+fclose(f);
+
+
+xi= [-1.0, -0.765055323, -0.285231516,   0.28523151, 0.765055323, 1.0 ];     
+xg   = zeros((N+1)*ne,1);
+
+k    = 1;
+for i=1:ne
+    for j=1:N+1
+            xg(k) = h*(i-1) +  h * ((xi(j) + 1) / 2);
+            k = k + 1; 
+    end
+    k
+end 
+
+
+
+% Green's function
+
+
+greensfn = zeros(nt);      
+
+for i=1:nt
+    if ((i*dt-abs(xr-xs)/c)>=0)
+        greensfn(i)=1./(2*c)
+    else
+        greensfn(i)=0
+    end
+end
+
+plot(src)

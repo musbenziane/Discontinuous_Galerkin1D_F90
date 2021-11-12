@@ -1,13 +1,16 @@
 testing              ! model name prefix (model names: prefix_vs, prefix_rho)
 4000                 ! xmax
-6                    ! Polynomial order
+5                    ! Polynomial order
 800                  ! Number of elements
 5                    ! Element size
-3.                   ! Wavelet's peak frequency
-0.000040             ! Time step
-50000                ! Number of time steps
-3                    ! Source location - element number
+6.                   ! Wavelet's peak frequency
+0.00005              ! Time step
+40000                ! Number of time steps
+400                  ! Source location - element number
 1                    ! Source location - collocation point
-100                  ! Snapshot interval
-1                    ! [1/2/3] 1: Free surface, 2: Rigid wall, 3: Periodic
-1                    ! Boundary condition only on the left side [not for periodic BC]
+20                   ! Snapshot interval
+100                  ! Receivers spacing in elements [Solution is extracted at the central gll point -or nearby-]
+2                    ! [1/2/3] 1: Free surface, 2: Rigid wall, 3: Periodic
+0                    ! Boundary condition only on the left side [not for periodic BC]
+1                    ! Initial conditions instead of source injection [will produce analytical solution]
+200                  ! Gaussian width for IC and for analytical solution

@@ -30,6 +30,8 @@ program DG1D
     ! 100                  ! Snapshot interval
     ! 3                    ! [1/2/3] 1: Free surface, 2: Rigid wall, 3: Periodic
     ! 1                    ! Boundary condition only on the left side [not for periodic BC]
+    ! 1                    ! Initial conditions instead of source injection [will produce analytical solution]
+    ! 200                  ! Gaussian width for IC and for analytical solution
     ! 
     ! -> Model files in C-Style binary floats [doubles]: Vs, Rho files are needed.
     !                                                  : For simple models, use create1Dmodel_files.f90
@@ -43,14 +45,14 @@ program DG1D
 !$ use omp_lib
 implicit none
     real(kind=8)                                  :: xmax, h, f0, dt, CFL, mindist, Ja, Jai, time
-    real(kind=8)                                  :: t_cpu_0, t_cpu_1, t_cpu
-    real(kind=8), dimension(:),     allocatable   :: xi, wi, v1D, rho1D, src, mu,Z
-    real(kind=8), dimension(:,:),   allocatable   :: lprime, xgll, Minv, Ke, sigma, v
-    real(kind=8), dimension(:,:,:), allocatable   :: Al, Ar, u, unew, k1, k2, flux
+    real(kind=8)                                  :: t_cpu_0, t_cpu_1, t_cpu, sd
+    real(kind=8), dimension(:),     allocatable   :: xi, wi, v1D, rho1D, src, mu, Z
+    real(kind=8), dimension(:,:),   allocatable   :: lprime, xgll, Minv, Ke, sigma, v, sgreens, vgreens, asgreens, sas,sav
+    real(kind=8), dimension(:,:,:), allocatable   :: Al, Ar, u, unew, k1, k2, flux,  as, av
     integer                                       :: N, ne, nt, esrc, gsrc, isnap, ngll, i, j, k, it, el,c, &
-                                                     bc, sbc, reclsnaps, ir, t0, t1
+                                                     bc, sbc, IC, reclsnaps, ir, t0, t1, ircv, nrcv
     integer, dimension(:,:), allocatable          :: Cij
-    character(len=40)                             :: filename, filecheck, outname_sigma, outname_v, &
+    character(len=40)                             :: filename, filecheck, outname_sigma, outname_v,  &
                                                      modnameprefix
     !$ integer                                    :: n_workers
     logical                                       :: OMPcheck = .false.
@@ -111,8 +113,11 @@ implicit none
     read(2,*) esrc
     read(2,*) gsrc
     read(2,*) isnap
+    read(2,*) ircv
     read(2,*) bc
     read(2,*) sbc
+    read(2,*) IC
+    read(2,*) sd
     close(2)
 
     120 format (A,F6.1)
@@ -136,13 +141,14 @@ implicit none
     !##########################################
 
     ngll = (N + 1) * ne                 ! Number of GLL points
+    nrcv = NINT(REAL(ne/ircv))
 
     allocate(xi(N+1))                   ! GLL points
     allocate(wi(N+1))                   ! GLL Quadrature weights
     allocate(v1D(ne))                   ! 1D velocity model in elements
     allocate(rho1D(ne))                 ! Density velocity model in elements
     allocate(mu(ne))                    ! Shear modulus mapped
-    allocate(Z(ne))                     ! Impepdences
+    allocate(Z(ne))                     ! Impepdences   
     allocate(xgll(ne,N+1))              ! Array for global mapping
     allocate(lprime(N+1,N+1))           ! Dervatives of Lagrange polynomials
     allocate(src(nt))                   ! Source time function
@@ -153,19 +159,23 @@ implicit none
     allocate(u(ne,N+1,2),unew(ne,N+1,2))! Solution fields
     allocate(k1(ne,N+1,2),k2(ne,N+1,2)) ! RK
     allocate(flux(ne,N+1,2))            ! Flux matrix
-    allocate(sigma(ngll,NINT(nt/REAL(isnap))),v(ngll,NINT(nt/REAL(isnap)))) ! Stretched solution fields
+    allocate(sigma(ngll,NINT(nt/REAL(isnap))),  v(ngll,NINT(nt/REAL(isnap))),&
+                as(ne,N+1,NINT(nt/REAL(isnap))), av(ne,N+1,NINT(nt/REAL(isnap))))      ! Stretched solution fields
+    allocate(sgreens(nt,nrcv),vgreens(nt,nrcv))
+    allocate(asgreens(nt,nrcv),sas(ngll,NINT(nt/REAL(isnap))),sav(ngll,NINT(nt/REAL(isnap))))
+
 
 
     !##########################################
     !#####      Calling subroutines       #####
     !##########################################
 
-    call zwgljd(xi,wi,N+1,0.,0.)                                  ! Getting GLL points and weights
     call readmodelfiles1D(v1D, rho1D, ne, modnameprefix)          ! Reading model files
     call shapefunc(N,h,ne, xgll)                                  ! Global domain mapping
     call lagrangeprime(N,lprime)                                  ! Lagrange polynomials derivatives
     call ricker(nt,f0,dt,src)                                     ! Source time function
-    call connectivity_matrix(N,ne,Cij)
+    call connectivity_matrix(N,ne,Cij) 
+    call zwgljd(xi,wi,N+1,0.,0.)                                  ! Getting GLL points and weights
 
 
     Ja   = h / 2.                ! Jacobian: Regular 1D mesh is used
@@ -230,13 +240,22 @@ implicit none
     !$OMP END PARALLEL DO
 
 
+
     write(*,*) "##########################################"
     write(*,*) "########### Begin time  loop  ############"
 
+    sgreens(:,:) = 0
+    vgreens(:,:) = 0
     k = 0
-    do it=1,nt
 
-        u(esrc,gsrc,1) = src(it)   ! source injection - stress component
+    if (IC==1) then
+        u(:,:,1) = exp(-(1/sd)**2*((xgll(:,:)-xgll(esrc,gsrc)))**2)
+    end if
+
+    do it=1,nt
+        if (IC .ne. 1) then
+            u(esrc,gsrc,1) = src(it)   ! source injection - stress component
+        end if
 
         call compute_flux(ne,u,N,Al,Ar,flux)
 
@@ -314,6 +333,16 @@ implicit none
             u(ne-1,1:N+1,2) =   u(3,1:N+1,2)
             u(ne,1:N+1,2)   =   u(4,1:N+1,2)
         end if
+        
+        !##########################################
+        !### Extract solution at rcv position   ###
+        !##########################################
+
+        do i=1,nrcv
+            sgreens(it,i) = u(i*ircv,CEILING(REAL((N+1)/2)),1) 
+            vgreens(it,i) = u(i*ircv,CEILING(REAL((N+1)/2)),2) 
+        end do
+
 
         !##########################################
         !##### Stretch solution matrices      #####
@@ -338,6 +367,40 @@ implicit none
     end do
 
 
+            
+    !##########################################
+    !##### Analytical Solution            #####
+    !##########################################
+    if (IC==1) then
+        k = 1
+        do it=1,nt,isnap
+            !$OMP PARALLEL DO PRIVATE(i,j)  SCHEDULE(static)
+            do i=1,ne
+                do j=1,N+1
+                    as(i,j,k) = 1./2.*(exp(-1./sd**2 * (xgll(i,j)-xgll(esrc,gsrc) + MAXVAL(v1D)*it*dt)**2) + &
+                                       exp(-1./sd**2 * (xgll(i,j)-xgll(esrc,gsrc) - MAXVAL(v1D)*it*dt)**2))
+
+                    av(i,j,k) = 1./(2.*MAXVAL(Z))*(exp(-1./sd**2 * (xgll(i,j)-xgll(esrc,gsrc) + MAXVAL(v1D)*it*dt)**2) - &
+                                                   exp(-1./sd**2 * (xgll(i,j)-xgll(esrc,gsrc) - MAXVAL(v1D)*it*dt)**2))
+                end do
+            enddo
+            !$OMP END PARALLEL DO
+
+            !$OMP PARALLEL DO PRIVATE(i,j)  SCHEDULE(static)
+            do i=1,ne
+                do j=1,N+1
+                    sas(Cij(j,i),k) = as(i,j,k)
+                    sav(Cij(j,i),k) = av(i,j,k)
+                end do
+            end do
+            !$OMP END PARALLEL DO
+
+            k = k + 1
+        end do
+    end if
+
+
+
     write(*,*) "##########################################"
     write(*,*)  "Number of snapshots recorded          -> ",k
 
@@ -358,6 +421,31 @@ implicit none
     open(15,file="OUTPUT/source.bin",access="direct",recl=nt*8)
     write(15,rec=1) src
     close(15)
+
+    reclsnaps = 0 
+    inquire(iolength=reclsnaps) sgreens
+
+    open(16,file="OUTPUT/seism_sigma.bin",access="direct",recl=reclsnaps)
+    write(16,rec=1) sgreens
+    close(16)
+
+    open(17,file="OUTPUT/seism_v.bin",access="direct",recl=reclsnaps)
+    write(17,rec=1) vgreens
+    close(17)
+
+
+    reclsnaps = 0 
+    inquire(iolength=reclsnaps) sas
+
+    open(18,file="OUTPUT/snapshots_sigma_analytical.bin",access="direct",recl=reclsnaps)
+    write(18,rec=1) sas
+    close(18)
+
+    open(19,file="OUTPUT/snapshots_v_analytical.bin",access="direct",recl=reclsnaps)
+    write(19,rec=1) sav
+    close(19)
+    
+
 
     call system_clock(count=t1, count_rate=ir)
     time = real(t1 - t0,kind=8) / real(ir,kind=8)
@@ -389,5 +477,5 @@ implicit none
     deallocate(u,unew)
     deallocate(k1,k2)
     deallocate(flux)
-    deallocate(sigma,v)
+    deallocate(sigma,v,as,av,sgreens,vgreens)
 end program
