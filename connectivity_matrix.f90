@@ -14,7 +14,7 @@ subroutine connectivity_matrix(N,ne,Cij)
             Cij(i,j) = c
             c = c + 1
         end do
-        c = c -1
+        !c = c -1
     end do
 
 end subroutine connectivity_matrix
